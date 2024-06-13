@@ -513,7 +513,6 @@ services:
 
     contao.repository.remember_me:
         class: Contao\CoreBundle\Repository\RememberMeRepository
-        public: true
         arguments:
             - '@doctrine'
 

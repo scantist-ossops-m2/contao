@@ -14,13 +14,11 @@ namespace Contao;
  * Provide methods to handle text fields with unit drop down menu.
  *
  * @property integer $maxlength
- * @property boolean $mandatory
- * @property string  $placeholder
  * @property array   $options
  *
  * @author Leo Feyer <https://github.com/leofeyer>
  */
-class InputUnit extends Widget
+class TrblField extends Widget
 {
 
 	/**
@@ -34,6 +32,12 @@ class InputUnit extends Widget
 	 * @var string
 	 */
 	protected $strTemplate = 'be_widget';
+
+	/**
+	 * Units
+	 * @var array
+	 */
+	protected $arrUnits = array();
 
 	/**
 	 * Add specific attributes
@@ -52,24 +56,8 @@ class InputUnit extends Widget
 				}
 				break;
 
-			case 'mandatory':
-				if ($varValue)
-				{
-					$this->arrAttributes['required'] = 'required';
-				}
-				else
-				{
-					unset($this->arrAttributes['required']);
-				}
-				parent::__set($strKey, $varValue);
-				break;
-
-			case 'placeholder':
-				$this->arrAttributes['placeholder'] = $varValue;
-				break;
-
 			case 'options':
-				$this->arrOptions = StringUtil::deserialize($varValue);
+				$this->arrUnits = StringUtil::deserialize($varValue);
 				break;
 
 			default:
@@ -79,6 +67,8 @@ class InputUnit extends Widget
 	}
 
 	/**
+	 * Do not validate unit fields
+	 *
 	 * @param mixed $varInput
 	 *
 	 * @return mixed
@@ -87,15 +77,7 @@ class InputUnit extends Widget
 	{
 		foreach ($varInput as $k=>$v)
 		{
-			if ($k == 'unit')
-			{
-				if (!$this->isValidOption($v))
-				{
-					$varInput[$k] = '';
-					$this->addError($GLOBALS['TL_LANG']['ERR']['invalid']);
-				}
-			}
-			else
+			if ($k != 'unit')
 			{
 				$varInput[$k] = parent::validator($v);
 			}
@@ -135,7 +117,7 @@ class InputUnit extends Widget
 	{
 		$arrUnits = array();
 
-		foreach ($this->arrOptions as $arrUnit)
+		foreach ($this->arrUnits as $arrUnit)
 		{
 			$arrUnits[] = sprintf('<option value="%s"%s>%s</option>',
 								   StringUtil::specialchars($arrUnit['value']),
@@ -143,17 +125,28 @@ class InputUnit extends Widget
 								   $arrUnit['label']);
 		}
 
+		$arrFields = array();
+		$arrKeys = array('top', 'right', 'bottom', 'left');
+
 		if (!\is_array($this->varValue))
 		{
-			$this->varValue = array('value'=>$this->varValue);
+			$this->varValue = array();
 		}
 
-		return sprintf('<input type="text" name="%s[value]" id="ctrl_%s" class="tl_text_unit%s" value="%s"%s onfocus="Backend.getScrollOffset()"> <select name="%s[unit]" class="tl_select_unit" onfocus="Backend.getScrollOffset()"%s>%s</select>%s',
-						$this->strName,
-						$this->strId,
-						($this->strClass ? ' ' . $this->strClass : ''),
-						StringUtil::specialchars($this->varValue['value']),
-						$this->getAttributes(),
+		foreach ($arrKeys as $strKey)
+		{
+			$arrFields[] = sprintf('<input type="text" name="%s[%s]" id="ctrl_%s" class="tl_text_trbl trbl_%s%s" value="%s"%s onfocus="Backend.getScrollOffset()">',
+									$this->strName,
+									$strKey,
+									$this->strId.'_'.$strKey,
+									$strKey,
+									(($this->strClass != '') ? ' ' . $this->strClass : ''),
+									StringUtil::specialchars(@$this->varValue[$strKey]), // see #4979
+									$this->getAttributes());
+		}
+
+		return sprintf('%s <select name="%s[unit]" class="tl_select_unit" onfocus="Backend.getScrollOffset()"%s>%s</select>%s',
+						implode(' ', $arrFields),
 						$this->strName,
 						$this->getAttribute('disabled'),
 						implode('', $arrUnits),
@@ -161,4 +154,4 @@ class InputUnit extends Widget
 	}
 }
 
-class_alias(InputUnit::class, 'InputUnit');
+class_alias(TrblField::class, 'TrblField');
